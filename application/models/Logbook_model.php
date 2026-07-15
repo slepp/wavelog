@@ -62,7 +62,7 @@ class Logbook_model extends CI_Model {
 		}
 		$this->load->is_loaded('worker') ?: $this->load->library('worker');
 		if ($this->worker->is_enabled()) {
-			$this->worker->publish('qso.' . $user_id, ['type' => 'qso_changed']);
+			$this->worker->publish($this->worker->user_qso_topic($user_id), ['type' => 'qso_changed']);
 		}
 	}
 

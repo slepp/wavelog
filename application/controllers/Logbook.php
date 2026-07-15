@@ -19,34 +19,34 @@ class Logbook extends CI_Controller {
 		// Live logbook: worker push (with polling fallback) refreshes the table and map.
 		// Only page 1 is live, so skip the option lookup and the worker round-trips elsewhere.
 		$data['live_capable'] = ((int)$this->uri->segment(3) == 0);
-		$data['worker_enabled'] = false;
-		$data['logbook_live_worker'] = null;
 		if ($data['live_capable']) {
 			$this->load->model('user_options_model');
 			$live_pref = $this->user_options_model->get_options('logbook', array('option_name' => 'live_mode', 'option_key' => 'boolean'))->row();
-			$data['live_mode_enabled'] = $live_pref->option_value ?? 'true';
+			$data['live_mode_enabled'] = $live_pref->option_value ?? '1';
 
 			$this->load->is_loaded('worker') ?: $this->load->library('worker');
 			$data['worker_enabled'] = $this->worker->is_enabled();
-			$user_id = $this->session->userdata('user_id') ?? null;
-			if ($this->worker->is_enabled() && $user_id) {
-				$topic = 'qso.' . $user_id;
+			$user_id = $this->session->userdata('user_id');
+			if ($data['worker_enabled'] && $user_id) {
+				$topic = $this->worker->user_qso_topic($user_id);
 				$this->worker->register_topic($topic);
 				$data['logbook_live_worker'] = ['topic' => $topic, 'token' => $this->worker->create_token($topic)];
 			}
 		}
 
 		$this->load->library('pagination');
-		$config = $this->log_pagination_config();
+		$locations = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$config = $this->log_pagination_config($locations);
 		$config['full_tag_open'] = '';
 		$config['full_tag_close'] = '';
 		$config['cur_tag_open'] = '<strong class="active"><a href="">';
 		$config['cur_tag_close'] = '</a></strong>';
 
 		$this->pagination->initialize($config);
+		$data['per_page'] = $config['per_page'];
 
 		//load the model and get results
-		$data['results'] = $this->logbook_model->get_qsos($config['per_page'],$this->uri->segment(3));
+		$data['results'] = $this->logbook_model->get_qsos($config['per_page'], $this->uri->segment(3), $locations);
 
 		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 		$data['user_map_custom'] = $this->optionslib->get_map_custom();
@@ -83,9 +83,9 @@ class Logbook extends CI_Controller {
 
 	// Shared pagination base for index() and live_table(); tag markup is set by the
 	// caller or overridden inside the log_ajax partial itself.
-	private function log_pagination_config() {
+	private function log_pagination_config($station_ids = null) {
 		$config['base_url'] = base_url().'index.php/logbook/index/';
-		$config['total_rows'] = $this->logbook_model->total_qsos();
+		$config['total_rows'] = $this->logbook_model->total_qsos($station_ids);
 		$config['per_page'] = 25;
 		$config['num_links'] = 6;
 		return $config;
@@ -105,10 +105,11 @@ class Logbook extends CI_Controller {
 		$this->load->model('logbook_model');
 
 		$this->load->library('pagination');
-		$config = $this->log_pagination_config();
+		$locations = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$config = $this->log_pagination_config($locations);
 		$this->pagination->initialize($config);
 
-		$data['results'] = $this->logbook_model->get_qsos($config['per_page'], 0);
+		$data['results'] = $this->logbook_model->get_qsos($config['per_page'], 0, $locations);
 		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
 
 		$this->load->view('view_log/partial/log_ajax', $data);

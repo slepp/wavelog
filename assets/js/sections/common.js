@@ -1092,11 +1092,14 @@ function showQsoActionsMenu(_this) {
     });
 }
 
-if ($('.table-responsive .dropdown-toggle').length>0) {
+// Bind (or rebind after an AJAX table swap) the hover-activated QSO actions menu.
+// The handler is direct, not delegated, so pages that replace table HTML must call this again.
+window.wlBindQsoActionsMenu = function () {
     $('.table-responsive .dropdown-toggle').off('mouseenter').on('mouseenter', function () {
         showQsoActionsMenu($(this).closest('.dropdown'));
     });
-}
+};
+wlBindQsoActionsMenu();
 
 var set_state;
 function statesDropdown(states, set_state = null, dropdown = '#stateDropdown') {
@@ -1537,18 +1540,20 @@ function LatLng2Loc(y, x, num) {
 
 // Fetch an HTML fragment and swap it into a target element, then reinit tooltips.
 // Replaces the former htmx hx-get / hx-target mechanism.
+// Resolves true when the fragment was swapped in, false when it was not
+// (error responses keep the current content instead of wiping the target).
 window.wlLoadInto = function (url, target) {
     const el = (typeof target === 'string') ? document.querySelector(target) : target;
-    if (!el) return Promise.resolve();
+    if (!el) return Promise.resolve(false);
     return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(r => r.ok ? r.text() : null)
-        .then(html => {
-            // keep the current content on error responses (e.g. expired session)
-            // instead of wiping the target with an empty or error body
-            if (html === null) return;
-            el.innerHTML = html;
-            // reinit Bootstrap tooltips on freshly swapped content (was htmx:afterSwap)
-            $('[data-bs-toggle="tooltip"]', el).tooltip();
+        .then(r => {
+            if (!r.ok) return false;
+            return r.text().then(html => {
+                el.innerHTML = html;
+                // reinit Bootstrap tooltips on freshly swapped content (was htmx:afterSwap)
+                $('[data-bs-toggle="tooltip"]', el).tooltip();
+                return true;
+            });
         });
 };
 

@@ -21,11 +21,10 @@
 		<?php } ?>
 	</div>
 
-	<?php $live_capable = $live_capable ?? false; // live logbook only refreshes page 1; set by Logbook::index() ?>
 	<div class="card">
 		<div class="card-header py-2 d-flex align-items-center justify-content-between">
 			<h6 class="mb-0"><i class="fas fa-list"></i> <?= __("Recent QSOs"); ?></h6>
-			<?php if ($live_capable) { ?>
+			<?php if ($live_capable) { // live logbook only refreshes page 1; set by Logbook::index() ?>
 				<button type="button" id="live_logbook_toggle" class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="tooltip" data-bs-title="<?= __("Automatically refresh the logbook when QSOs change"); ?>">
 					<i class="fas fa-circle me-1"></i><?= __("Live"); ?>
 				</button>
@@ -34,9 +33,8 @@
 		<div class="card-body">
 			<div id="logbook-table-container"
 				<?php if ($live_capable) { ?>
-				data-live-url="<?php echo site_url('logbook/live_table'); ?>"
-				data-live-enabled="<?php echo (($live_mode_enabled ?? 'true') == 'true') ? '1' : '0'; ?>"
-				data-save-pref-url="<?php echo site_url('user_options/save_logbook_pref'); ?>"
+				data-live-enabled="<?php echo html_escape($live_mode_enabled); ?>"
+				data-per-page="<?php echo (int)$per_page; ?>"
 				<?php if (!empty($logbook_live_worker)) { ?>
 				data-worker-topic="<?php echo html_escape($logbook_live_worker['topic']); ?>"
 				data-worker-token="<?php echo html_escape($logbook_live_worker['token']); ?>"

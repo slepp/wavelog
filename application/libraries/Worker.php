@@ -59,6 +59,15 @@ class Worker {
 	}
 
 	/**
+	 * Canonical topic name for a user's QSO-change events.
+	 * Publishers and subscribers must build the name through this helper —
+	 * a drift between them fails silently (the Worker swallows errors).
+	 */
+	public function user_qso_topic($user_id): string {
+		return 'qso.' . $user_id;
+	}
+
+	/**
 	 * Registers a topic with the Worker so browsers can connect to it.
 	 * Idempotent — safe to call on every page load.
 	 *

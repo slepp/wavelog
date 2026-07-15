@@ -63,7 +63,7 @@ class User_Options extends CI_Controller {
 
 		header('Content-Type: application/json');
 		if (in_array($value, ['1', '0'], true)) {
-			$this->user_options_model->set_option('logbook', 'live_mode', array('boolean' => $value === '1' ? 'true' : 'false'));
+			$this->user_options_model->set_option('logbook', 'live_mode', array('boolean' => $value));
 			echo json_encode(['success' => 1]);
 		} else {
 			echo json_encode(['success' => 0, 'error' => 'Invalid data']);
