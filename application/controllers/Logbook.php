@@ -16,11 +16,28 @@ class Logbook extends CI_Controller {
 
 		$this->load->model('logbook_model');
 
+		// Live logbook: worker push (with polling fallback) refreshes the table and map.
+		// Only page 1 is live, so skip the option lookup and the worker round-trips elsewhere.
+		$data['live_capable'] = ((int)$this->uri->segment(3) == 0);
+		$data['worker_enabled'] = false;
+		$data['logbook_live_worker'] = null;
+		if ($data['live_capable']) {
+			$this->load->model('user_options_model');
+			$live_pref = $this->user_options_model->get_options('logbook', array('option_name' => 'live_mode', 'option_key' => 'boolean'))->row();
+			$data['live_mode_enabled'] = $live_pref->option_value ?? 'true';
+
+			$this->load->is_loaded('worker') ?: $this->load->library('worker');
+			$data['worker_enabled'] = $this->worker->is_enabled();
+			$user_id = $this->session->userdata('user_id') ?? null;
+			if ($this->worker->is_enabled() && $user_id) {
+				$topic = 'qso.' . $user_id;
+				$this->worker->register_topic($topic);
+				$data['logbook_live_worker'] = ['topic' => $topic, 'token' => $this->worker->create_token($topic)];
+			}
+		}
+
 		$this->load->library('pagination');
-		$config['base_url'] = base_url().'index.php/logbook/index/';
-		$config['total_rows'] = $this->logbook_model->total_qsos();
-		$config['per_page'] = 25;
-		$config['num_links'] = 6;
+		$config = $this->log_pagination_config();
 		$config['full_tag_open'] = '';
 		$config['full_tag_close'] = '';
 		$config['cur_tag_open'] = '<strong class="active"><a href="">';
@@ -62,6 +79,39 @@ class Logbook extends CI_Controller {
 		$this->load->view('view_log/index');
 		$this->load->view('interface_assets/footer');
 
+	}
+
+	// Shared pagination base for index() and live_table(); tag markup is set by the
+	// caller or overridden inside the log_ajax partial itself.
+	private function log_pagination_config() {
+		$config['base_url'] = base_url().'index.php/logbook/index/';
+		$config['total_rows'] = $this->logbook_model->total_qsos();
+		$config['per_page'] = 25;
+		$config['num_links'] = 6;
+		return $config;
+	}
+
+	/*
+	 * AJAX: returns the first page of the QSO table (log_ajax partial) for the live logbook refresh.
+	 * Returns 403 (instead of an empty 200) on auth failure so the client can skip the swap.
+	 */
+	function live_table() {
+		if(!$this->user_model->authorize($this->config->item('auth_mode'))) {
+			$this->output->set_status_header(403);
+			return;
+		}
+		session_write_close();
+
+		$this->load->model('logbook_model');
+
+		$this->load->library('pagination');
+		$config = $this->log_pagination_config();
+		$this->pagination->initialize($config);
+
+		$data['results'] = $this->logbook_model->get_qsos($config['per_page'], 0);
+		$data['adif_propmodes'] = $this->config->item('adif_propmodes');
+
+		$this->load->view('view_log/partial/log_ajax', $data);
 	}
 
 	function jsonentity($adif) {

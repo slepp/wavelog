@@ -54,6 +54,23 @@ class User_Options extends CI_Controller {
 	}
 
 	/**
+	 * Save the live-logbook preference from the logbook page toggle.
+	 * Body: {"value":"1"|"0"}
+	 */
+	public function save_logbook_pref() {
+		$obj = json_decode(file_get_contents("php://input"), true);
+		$value = $this->security->xss_clean($obj['value'] ?? '');
+
+		header('Content-Type: application/json');
+		if (in_array($value, ['1', '0'], true)) {
+			$this->user_options_model->set_option('logbook', 'live_mode', array('boolean' => $value === '1' ? 'true' : 'false'));
+			echo json_encode(['success' => 1]);
+		} else {
+			echo json_encode(['success' => 0, 'error' => 'Invalid data']);
+		}
+	}
+
+	/**
 	 * Save a dashboard layout preference from the dashboard context menu.
 	 * Body: {"pref":"kpi|solar","value":...}
 	 */

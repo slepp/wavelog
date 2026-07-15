@@ -1541,8 +1541,11 @@ window.wlLoadInto = function (url, target) {
     const el = (typeof target === 'string') ? document.querySelector(target) : target;
     if (!el) return Promise.resolve();
     return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(r => r.text())
+        .then(r => r.ok ? r.text() : null)
         .then(html => {
+            // keep the current content on error responses (e.g. expired session)
+            // instead of wiping the target with an empty or error body
+            if (html === null) return;
             el.innerHTML = html;
             // reinit Bootstrap tooltips on freshly swapped content (was htmx:afterSwap)
             $('[data-bs-toggle="tooltip"]', el).tooltip();
