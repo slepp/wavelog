@@ -58,6 +58,7 @@ class Dashboard extends CI_Controller {
 
 		// We need the form_helper for the layout/messages
 		$this->load->helper('form');
+		$this->load->helper('dashboard');
 
 		$this->load->model('stations');
 		$this->load->model('setup_model');
@@ -100,10 +101,18 @@ class Dashboard extends CI_Controller {
 		$this->load->is_loaded('worker') ?: $this->load->library('worker');
 		$data['worker_enabled'] = $this->worker->is_enabled(); // without this line the worker.js is not loaded!
 		$data['radios_user_worker'] = null;
+		$data['dashboard_qso_worker'] = null;
 		if ($this->worker->is_enabled()) {
-			$topic = 'radios_user.' . $this->session->userdata('user_id');
-			$this->worker->register_topic($topic);
-			$data['radios_user_worker'] = ['topic' => $topic, 'token' => $this->worker->create_token($topic)];
+			$user_id = $this->session->userdata('user_id');
+			if ($user_id) {
+				$topic = 'radios_user.' . $user_id;
+				$this->worker->register_topic($topic);
+				$data['radios_user_worker'] = ['topic' => $topic, 'token' => $this->worker->create_token($topic)];
+
+				$topic = $this->worker->user_qso_topic($user_id);
+				$this->worker->register_topic($topic);
+				$data['dashboard_qso_worker'] = ['topic' => $topic, 'token' => $this->worker->create_token($topic)];
+			}
 		}
 
 		$qso_counts = $this->logbook_model->get_qso_counts($logbooks_locations_array);
@@ -112,17 +121,7 @@ class Dashboard extends CI_Controller {
 		$data['month_qsos'] = $qso_counts['month'];
 		$data['year_qsos'] = $qso_counts['year'];
 
-		$rawstreak = $this->dayswithqso_model->getCurrentStreak();
-		if (is_array($rawstreak)) {
-			$data['current_streak'] = $rawstreak['highstreak'];
-		} else {
-			$rawstreak = $this->dayswithqso_model->getAlmostCurrentStreak();
-			if (is_array($rawstreak)) {
-				$data['current_streak'] = $rawstreak['highstreak'];
-			} else {
-				$data['current_streak'] = 0;
-			}
-		}
+		$data['current_streak'] = $this->current_streak();
 
 		$data['almost_current_streak'] = $data['current_streak'];
 
@@ -258,5 +257,60 @@ class Dashboard extends CI_Controller {
 
 		$data['radio_status'] = $this->cat->recent_status();
 		$this->load->view('components/radio_display_table', $data);
+	}
+
+	function live_recent_qsos() {
+		session_write_close();
+
+		$this->load->helper('dashboard');
+		$this->load->model('logbook_model');
+		$this->load->model('logbooks_model');
+
+		$locations = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$data['last_qso_count'] = empty($this->session->userdata('dashboard_last_qso_count')) ? DASHBOARD_DEFAULT_QSOS_COUNT : $this->session->userdata('dashboard_last_qso_count');
+		$data['last_qsos_list'] = $this->logbook_model->get_last_qsos($data['last_qso_count'], $locations);
+
+		$this->load->view('dashboard/partial/recent_qsos', $data);
+	}
+
+	function live_summary() {
+		session_write_close();
+
+		$this->load->model('logbook_model');
+		$this->load->model('logbooks_model');
+		$this->load->model('dayswithqso_model');
+		$this->load->model('dxcc');
+
+		$locations = $this->logbooks_model->list_logbook_relationships($this->session->userdata('active_station_logbook'));
+		$qso_counts = $this->logbook_model->get_qso_counts($locations);
+		$stats = $this->logbook_model->dashboard_stats_batch($locations);
+		$current_streak = $this->current_streak();
+		$total_countries_needed = count($this->dxcc->list_current()->result()) - $stats['Countries_Current'];
+
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode([
+				'total_qsos' => (int)$qso_counts['total'],
+				'year_qsos' => (int)$qso_counts['year'],
+				'month_qsos' => (int)$qso_counts['month'],
+				'todays_qsos' => (int)$qso_counts['today'],
+				'current_streak' => sprintf(_ngettext("%d Day", "%d Days", $current_streak), $current_streak),
+				'unique_callsigns' => (int)($stats['Unique_Callsigns'] ?? 0),
+				'countries_worked' => (int)$stats['Countries_Worked'],
+				'countries_confirmed_qsl' => (int)$stats['Countries_Worked_QSL'],
+				'countries_confirmed_lotw' => (int)$stats['Countries_Worked_LOTW'],
+				'countries_confirmed_eqsl' => (int)$stats['Countries_Worked_EQSL'],
+				'countries_needed' => (int)$total_countries_needed,
+			]));
+	}
+
+	private function current_streak() {
+		$rawstreak = $this->dayswithqso_model->getCurrentStreak();
+		if (is_array($rawstreak)) {
+			return (int)$rawstreak['highstreak'];
+		}
+
+		$rawstreak = $this->dayswithqso_model->getAlmostCurrentStreak();
+		return is_array($rawstreak) ? (int)$rawstreak['highstreak'] : 0;
 	}
 }

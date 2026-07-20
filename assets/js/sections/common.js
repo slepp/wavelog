@@ -1542,13 +1542,20 @@ function LatLng2Loc(y, x, num) {
 // Replaces the former htmx hx-get / hx-target mechanism.
 // Resolves true when the fragment was swapped in, false when it was not
 // (error responses keep the current content instead of wiping the target).
-window.wlLoadInto = function (url, target) {
+window.wlLoadInto = function (url, target, options = {}) {
     const el = (typeof target === 'string') ? document.querySelector(target) : target;
     if (!el) return Promise.resolve(false);
     return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(r => {
             if (!r.ok) return false;
             return r.text().then(html => {
+                if (options.skipUnchanged) {
+                    const parsed = document.createElement('template');
+                    parsed.innerHTML = html;
+                    if (el.innerHTML.trim() === parsed.innerHTML.trim()) {
+                        return false;
+                    }
+                }
                 el.innerHTML = html;
                 // reinit Bootstrap tooltips on freshly swapped content (was htmx:afterSwap)
                 $('[data-bs-toggle="tooltip"]', el).tooltip();

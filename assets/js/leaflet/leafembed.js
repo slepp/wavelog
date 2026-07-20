@@ -1,5 +1,7 @@
 var map;
 var plotlayers=[];
+var lastPlotSignature = null;
+var plotRequestId = 0;
 var iconsList={'qso':{'color':'#E5A50A','icon':'fas fa-dot-circle'}};
 
 var stationIcon = L.divIcon({className:'cspot_station'});
@@ -13,6 +15,8 @@ var osmUrl = $('#leafembed').attr("tileUrl");
 function initmap(ShowGrid='No', MapTag='map', options={}) {
     // set up the map
     map = new L.Map(MapTag);
+	lastPlotSignature = null;
+	plotRequestId = 0;
     // create the tile layer with correct attribution
 	var osmAttrib = option_map_tile_server_copyright;
     var osm = new L.TileLayer(osmUrl, {minZoom: 1, maxZoom: 12, attribution: osmAttrib});
@@ -100,12 +104,24 @@ function initplot(_url_qso, options={}) {
 }
 
 function askForPlots(_url_qso, options={}) {
-	removeMarkers();
 	if (typeof options.dataPost !== "undefined") { _dataPost = options.dataPost; } else { _dataPost = {}; }
+	var requestId = ++plotRequestId;
     $.ajax({
         url: _url_qso, type: 'POST', dataType: 'json', data: _dataPost,
         error: function() { console.log('[ERROR] ajax askForPlots() function return error.'); },
         success: function(plotjson) {
+			if (requestId !== plotRequestId) {
+				return;
+			}
+			var signature = JSON.stringify({
+				markers: plotjson.markers || [],
+				station: plotjson.station || null
+			});
+			if (signature === lastPlotSignature) {
+				return;
+			}
+			lastPlotSignature = signature;
+			removeMarkers();
         	if ((typeof plotjson['markers'] !== "undefined")&&(plotjson['markers'].length>0)) {
 				for (i=0;i<plotjson['markers'].length;i++) { createPlots(plotjson['markers'][i], plotjson.station); }
         	}

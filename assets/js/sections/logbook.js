@@ -22,9 +22,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	let pollTimer = null;
 
 	function refreshLogbook() {
-		return wlLoadInto(liveTableUrl, container).then(function (swapped) {
-			if (!swapped) return;
-			wlBindQsoActionsMenu();
+		return wlLoadInto(liveTableUrl, container, { skipUnchanged: true }).then(function (swapped) {
+			if (swapped) {
+				wlBindQsoActionsMenu();
+			}
 			// leafembed globals only exist when the logbook map is enabled
 			if (typeof askForPlots === 'function' && typeof qso_loc !== 'undefined' && document.getElementById('map')) {
 				askForPlots(qso_loc, { dataPost: { nb_qso: container.dataset.perPage, offset: '' }, map_id: '#map' });

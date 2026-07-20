@@ -1,108 +1,8 @@
 
-<?php
-function echo_table_header_col($name) {
-	switch($name) {
-		case 'Mode': echo '<th scope="col">'.__("Mode").'</th>'; break;
-		case 'RSTS': echo '<th scope="col" class="d-none d-sm-table-cell">'.__("RSTS").'</th>'; break;
-		case 'RSTR': echo '<th scope="col" class="d-none d-sm-table-cell">'.__("RSTR").'</th>'; break;
-		case 'Country': echo '<th scope="col">'.__("Country").'</th>'; break;
-		case 'IOTA': echo '<th scope="col">'.__("IOTA").'</th>'; break;
-		case 'SOTA': echo '<th scope="col">'.__("SOTA").'</th>'; break;
-		case 'WWFF': echo '<th scope="col">'.__("WWFF").'</th>'; break;
-		case 'POTA': echo '<th scope="col">'.__("POTA").'</th>'; break;
-		case 'State': echo '<th scope="col">'.__("State").'</th>'; break;
-		case 'Grid': echo '<th scope="col">'.__("Gridsquare").'</th>'; break;
-		case 'Distance': echo '<th scope="col">'.__("Distance").'</th>'; break;
-		case 'Band': echo '<th scope="col">'.__("Band").'</th>'; break;
-		case 'Frequency': echo '<th scope="col">'.__("Frequency").'</th>'; break;
-		case 'Operator': echo '<th scope="col">'.__("Operator").'</th>'; break;
-		case 'Name': echo '<th scope="col">'.__("Name").'</th>'; break;
-		case 'Bearing': echo '<th scope="col">'.__("Bearing").'</th>'; break;
-	}
-}
-
-	function echo_table_col($row, $name) {
-		$ci =& get_instance();
-		switch($name) {
-			case 'Mode':    echo '<td>'; echo $row->COL_SUBMODE==null?$row->COL_MODE:$row->COL_SUBMODE . '</td>'; break;
-			case 'RSTS':    echo '<td class="d-none d-sm-table-cell">' . $row->COL_RST_SENT; if ($row->COL_STX) { echo ' <span data-bs-toggle="tooltip" title="'.($row->COL_CONTEST_ID!=""?$row->COL_CONTEST_ID:"n/a").'" class="badge text-bg-light">'; printf("%03d", $row->COL_STX); echo '</span>';} if ($row->COL_STX_STRING) { echo ' <span data-bs-toggle="tooltip" title="'.($row->COL_CONTEST_ID!=""?$row->COL_CONTEST_ID:"n/a").'" class="badge text-bg-light">' . $row->COL_STX_STRING . '</span>';} echo '</td>'; break;
-			case 'RSTR':    echo '<td class="d-none d-sm-table-cell">' . $row->COL_RST_RCVD; if ($row->COL_SRX) { echo ' <span data-bs-toggle="tooltip" title="'.($row->COL_CONTEST_ID!=""?$row->COL_CONTEST_ID:"n/a").'" class="badge text-bg-light">'; printf("%03d", $row->COL_SRX); echo '</span>';} if ($row->COL_SRX_STRING) { echo ' <span data-bs-toggle="tooltip" title="'.($row->COL_CONTEST_ID!=""?$row->COL_CONTEST_ID:"n/a").'" class="badge text-bg-light">' . $row->COL_SRX_STRING . '</span>';} echo '</td>'; break;
-			case 'Country': echo '<td>' . ucwords(strtolower(($row->COL_COUNTRY))); if ($row->end != NULL) echo ' <span class="badge text-bg-danger">'.__("Deleted DXCC").'</span>'  . '</td>'; break;
-			case 'IOTA':    echo '<td>' . ($row->COL_IOTA) . '</td>'; break;
-			case 'SOTA':    echo '<td>' . ($row->COL_SOTA_REF) . '</td>'; break;
-			case 'WWFF':    echo '<td>' . ($row->COL_WWFF_REF) . '</td>'; break;
-			case 'POTA':    echo '<td>' . ($row->COL_POTA_REF) . '</td>'; break;
-			case 'Grid':
-				if(!$ci->load->is_loaded('Qra')) {
-					$ci->load->library('qra');
-				}
-				echo '<td>' . ($ci->qra->echoQrbCalcLink($row->station_gridsquare, $row->COL_VUCC_GRIDS, $row->COL_GRIDSQUARE)) . '</td>'; break;
-			case 'Distance':echo '<td><span data-bs-toggle="tooltip" title="'.$row->COL_GRIDSQUARE.'">' . getDistance($row->COL_DISTANCE) . '</span></td>'; break;
-			case 'Bearing':echo '<td><span data-bs-toggle="tooltip" title="'.($row->COL_VUCC_GRIDS!="" ? $row->COL_VUCC_GRIDS : $row->COL_GRIDSQUARE).'">' . getBearing(($row->COL_VUCC_GRIDS!="" ? $row->COL_VUCC_GRIDS : $row->COL_GRIDSQUARE)) . '</span></td>'; break;
-			case 'Band':    echo '<td>'; if($row->COL_SAT_NAME != null) { echo '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'.$row->COL_SAT_NAME.'</a></td>'; } else { echo strtolower($row->COL_BAND ?? ''); } echo '</td>'; break;
-			case 'Frequency':
-				echo '<td>'; if($row->COL_SAT_NAME != null) { echo '<a href="https://db.satnogs.org/search/?q='.$row->COL_SAT_NAME.'" target="_blank">'.$row->COL_SAT_NAME.'</a></td>'; } else { if($row->COL_FREQ != null && $row->COL_FREQ != 0) { echo $ci->frequency->qrg_conversion($row->COL_FREQ); } else { echo strtolower($row->COL_BAND ?? ''); } } echo '</td>'; break;
-			case 'State':   echo '<td>' . ($row->COL_STATE) . '</td>'; break;
-			case 'Operator': echo '<td>' . ($row->COL_OPERATOR) . '</td>'; break;
-			case 'Name': echo '<td>' . ($row->COL_NAME) . '</td>'; break;
-		}
-	}
-
-	function getBearing($grid = '') {
-		if ($grid == '')  return '';
-		$ci =& get_instance();
-		if (($ci->session->userdata('user_locator') ?? '') != '') {
-			if(!$ci->load->is_loaded('qra')) {
-				$ci->load->library('qra');
-			}
-			$bearing=$ci->qra->get_bearing($ci->session->userdata('user_locator'),$grid);
-			return($bearing.'&deg;');
-		} else {
-			return '';
-		}
-	}
-
-
-	function getDistance($distance) {
-		if (($distance ?? 0) == 0) return '';
-
-		$ci =& get_instance();
-		if ($ci->session->userdata('user_measurement_base') == NULL) {
-			$measurement_base = $ci->config->item('measurement_base');
-		}
-		else {
-			$measurement_base = $ci->session->userdata('user_measurement_base');
-		}
-
-		switch ($measurement_base) {
-			case 'M':
-				$unit = "mi";
-				break;
-			case 'K':
-				$unit = "km";
-				break;
-			case 'N':
-				$unit = "nmi";
-				break;
-			default:
-				$unit = "km";
-			}
-
-		if ($unit == 'mi') {
-			$distance = round($distance * 0.621371, 1);
-		}
-		if ($unit == 'nmi') {
-			$distance = round($distance * 0.539957, 1);
-		}
-
-		return $distance . ' ' . $unit;
-	}
-
-	?>
-
 <script>
 	let user_map_custom = JSON.parse('<?php echo $user_map_custom; ?>');
 	window.radiosUserWorker = <?php echo json_encode($radios_user_worker ?? null); ?>;
+	window.dashboardQsoWorker = <?php echo json_encode($dashboard_qso_worker ?? null); ?>;
 </script>
 
 <div class="container dashboard px-3 px-lg-4 mt-3 mb-3" id="main-content">
@@ -236,7 +136,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-list-ol"></i> <?= __("Total QSOs"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $total_qsos; ?></h4>
+					<h4 id="dashboard-total-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $total_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -246,7 +146,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-calendar"></i> <?= __("QSOs this year"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $year_qsos; ?></h4>
+					<h4 id="dashboard-year-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $year_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -256,7 +156,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-calendar-day"></i> <?= __("QSOs this month"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $month_qsos; ?></h4>
+					<h4 id="dashboard-month-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $month_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -266,7 +166,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-clock"></i> <?= __("QSOs today"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $todays_qsos; ?></h4>
+					<h4 id="dashboard-todays-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $todays_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -276,7 +176,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-fire"></i> <?= __("Current Streak"); ?> <a href="<?php echo site_url('dayswithqso'); ?>#streaks" aria-label="<?= __("Current Streak"); ?>"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i></a></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?= sprintf(_ngettext("%d Day", "%d Days", (int) $current_streak), (int) $current_streak) ?></h4>
+					<h4 id="dashboard-current-streak" class="fw-bold mb-0 px-3 py-2"><?= sprintf(_ngettext("%d Day", "%d Days", (int) $current_streak), (int) $current_streak) ?></h4>
 				</div>
 			</div>
 		</div>
@@ -286,7 +186,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-users"></i> <?= __("Unique callsigns"); ?> <a href="<?php echo site_url('statistics'); ?>#uniquetab" aria-label="<?= __("Unique callsigns"); ?>"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i></a></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $unique_callsigns; ?></h4>
+					<h4 id="dashboard-unique-callsigns" class="fw-bold mb-0 px-3 py-2"><?php echo $unique_callsigns; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -327,62 +227,9 @@ function echo_table_header_col($name) {
 			</div>
 		</div>
 		<?php } ?>
-		<div class="card">
-			<div class="card-header py-2">
-				<h6 class="mb-0"><i class="fas fa-list"></i> <?= __("Recent QSOs"); ?></h6>
-			</div>
-			<div class="card-body p-0">
-				<div class="table-responsive">
-					<table class="table table-striped table-hover mb-0" aria-label="<?= __("Recent QSOs"); ?>">
-						<thead>
-							<tr>
-								<th scope="col"><?= __("Date"); ?></th>
-								<?php if(($this->config->item('use_auth') && ($this->session->userdata('user_type') >= 2)) || $this->config->item('use_auth') === FALSE || ($this->config->item('show_time'))) { ?>
-								<th scope="col"><?= __("Time"); ?></th>
-								<?php } ?>
-								<th scope="col"><?= __("Callsign"); ?></th>
-								<?php
-								echo_table_header_col($this->session->userdata('user_column1')==""?'Mode':$this->session->userdata('user_column1'));
-								echo_table_header_col($this->session->userdata('user_column2')==""?'RSTS':$this->session->userdata('user_column2'));
-								echo_table_header_col($this->session->userdata('user_column3')==""?'RSTR':$this->session->userdata('user_column3'));
-								echo_table_header_col($this->session->userdata('user_column4')==""?'Band':$this->session->userdata('user_column4'));
-							?>
-							</tr>
-						</thead>
-						<?php
-						$i = 0;
-						if(!empty($last_qsos_list) > 0) {
-						foreach ($last_qsos_list->result() as $row) { ?>
-							<?php  echo '<tr id="qso_'.$row->COL_PRIMARY_KEY.'" class="tr'.($i & 1).'">'; ?>
-								<?php
-								if($this->session->userdata('user_date_format')) {
-									$custom_date_format = $this->session->userdata('user_date_format');
-								} else {
-									$custom_date_format = $this->config->item('qso_date_format');
-								}
-								?>
-								<td><?php $timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00'); echo date($custom_date_format, $timestamp); ?></td>
-								<?php if(($this->config->item('use_auth') && ($this->session->userdata('user_type') >= 2)) || $this->config->item('use_auth') === FALSE || ($this->config->item('show_time'))) { ?>
-								<td><?php $timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00'); echo date('H:i', $timestamp); ?></td>
-								<?php } ?>
-								<td>
-									<button type="button" class="btn btn-link text-decoration-none p-0" onclick="displayQso(<?php echo $row->COL_PRIMARY_KEY; ?>)" aria-label="<?= __("View QSO"); ?> <?php echo $row->COL_CALL; ?>"><?php echo str_replace("0","&Oslash;",strtoupper($row->COL_CALL)); ?></button>
-								</td>
-								<?php
-									echo_table_col($row, $this->session->userdata('user_column1')==""?'Mode':$this->session->userdata('user_column1'));
-									echo_table_col($row, $this->session->userdata('user_column2')==""?'RSTS':$this->session->userdata('user_column2'));
-									echo_table_col($row, $this->session->userdata('user_column3')==""?'RSTR':$this->session->userdata('user_column3'));
-									echo_table_col($row, $this->session->userdata('user_column4')==""?'Band':$this->session->userdata('user_column4'));
-								?>
-							</tr>
-						<?php $i++; } } ?>
-					</table>
-				</div>
-			</div>
+		<div id="dashboard-recent-qsos">
+			<?php $this->load->view('dashboard/partial/recent_qsos', ['last_qsos_list' => $last_qsos_list, 'last_qso_count' => $last_qso_count]); ?>
 		</div>
-		<small class="mb-3 me-2" style="float: right;">
-			<?= sprintf(_ngettext("Max. %d previous contact is shown", "Max. %d previous contacts are shown", intval($last_qso_count)), intval($last_qso_count)); ?>
-		</small>
 	</div>
 
 	<!-- Right column: cards -->
@@ -485,19 +332,19 @@ function echo_table_header_col($name) {
 				<table class="table table-striped mb-0" aria-label="<?= __("DXCCs Breakdown"); ?>">
 					<tr>
 						<th scope="row" width="50%"><?= __("Worked"); ?></th>
-						<td width="50%"><?php echo $total_countries; ?></td>
+						<td id="dashboard-countries-worked" width="50%"><?php echo $total_countries; ?></td>
 					</tr>
 					<tr>
 						<th scope="row" width="50%"><?= __("Confirmed"); ?></th>
 						<td width="50%">
-							<span title="<?= __("QSL Cards"); ?>" aria-label="<?= __("QSL Cards"); ?>: <?php echo $total_countries_confirmed_paper; ?>" data-bs-toggle="tooltip"><?php echo $total_countries_confirmed_paper; ?></span> /
-							<span title="<?= __("LoTW"); ?>" aria-label="<?= __("LoTW"); ?>: <?php echo $total_countries_confirmed_lotw; ?>" data-bs-toggle="tooltip"><?php echo $total_countries_confirmed_lotw; ?></span> /
-							<span title="<?= __("eQSL"); ?>" aria-label="<?= __("eQSL"); ?>: <?php echo $total_countries_confirmed_eqsl; ?>" data-bs-toggle="tooltip"><?php echo $total_countries_confirmed_eqsl; ?></span>
+							<span id="dashboard-countries-confirmed-qsl" title="<?= __("QSL Cards"); ?>" aria-label="<?= __("QSL Cards"); ?>: <?php echo $total_countries_confirmed_paper; ?>" data-bs-toggle="tooltip"><?php echo $total_countries_confirmed_paper; ?></span> /
+							<span id="dashboard-countries-confirmed-lotw" title="<?= __("LoTW"); ?>" aria-label="<?= __("LoTW"); ?>: <?php echo $total_countries_confirmed_lotw; ?>" data-bs-toggle="tooltip"><?php echo $total_countries_confirmed_lotw; ?></span> /
+							<span id="dashboard-countries-confirmed-eqsl" title="<?= __("eQSL"); ?>" aria-label="<?= __("eQSL"); ?>: <?php echo $total_countries_confirmed_eqsl; ?>" data-bs-toggle="tooltip"><?php echo $total_countries_confirmed_eqsl; ?></span>
 						</td>
 					</tr>
 					<tr>
 						<th scope="row" width="50%"><?= __("Needed"); ?></th>
-						<td width="50%"><?php echo $total_countries_needed; ?></td>
+						<td id="dashboard-countries-needed" width="50%"><?php echo $total_countries_needed; ?></td>
 					</tr>
 				</table>
 			</div>
