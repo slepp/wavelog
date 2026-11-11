@@ -22,11 +22,27 @@
 	</div>
 
 	<div class="card">
-		<div class="card-header py-2">
+		<div class="card-header py-2 d-flex align-items-center justify-content-between">
 			<h6 class="mb-0"><i class="fas fa-list"></i> <?= __("Recent QSOs"); ?></h6>
+			<?php if ($live_capable) { // live logbook only refreshes page 1; set by Logbook::index() ?>
+				<button type="button" id="live_logbook_toggle" class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="tooltip" data-bs-title="<?= __("Automatically refresh the logbook when QSOs change"); ?>">
+					<i class="fas fa-circle me-1"></i><?= __("Live"); ?>
+				</button>
+			<?php } ?>
 		</div>
 		<div class="card-body">
-			<?php $this->load->view('view_log/partial/log_ajax') ?>
+			<div id="logbook-table-container"
+				<?php if ($live_capable) { ?>
+				data-live-enabled="<?php echo html_escape($live_mode_enabled); ?>"
+				data-per-page="<?php echo (int)$per_page; ?>"
+				<?php if (!empty($logbook_live_worker)) { ?>
+				data-worker-topic="<?php echo html_escape($logbook_live_worker['topic']); ?>"
+				data-worker-token="<?php echo html_escape($logbook_live_worker['token']); ?>"
+				<?php } ?>
+				<?php } ?>
+				>
+				<?php $this->load->view('view_log/partial/log_ajax') ?>
+			</div>
 		</div>
 	</div>
 </div>
