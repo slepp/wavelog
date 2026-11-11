@@ -1110,6 +1110,10 @@ $($('#callsign')).on('keypress',function(e) {
     </script>
 <?php } ?>
 
+<?php if (!empty($live_capable)) { // set by Logbook::index() on page 1 only ?>
+    <script type="text/javascript" src="<?php echo $this->paths->cache_buster('/assets/js/sections/logbook.js'); ?>"></script>
+<?php } ?>
+
 <?php if ($this->uri->segment(1) == "qso") { ?>
 
 <script src="<?php echo $this->paths->cache_buster('/assets/js/sections/callsign_validation.js'); ?>"></script>
