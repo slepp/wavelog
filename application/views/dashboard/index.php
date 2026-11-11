@@ -103,6 +103,7 @@ function echo_table_header_col($name) {
 <script>
 	let user_map_custom = JSON.parse('<?php echo $user_map_custom; ?>');
 	window.radiosUserWorker = <?php echo json_encode($radios_user_worker ?? null); ?>;
+	window.dashboardQsoWorker = <?php echo json_encode($dashboard_qso_worker ?? null); ?>;
 </script>
 
 <div class="container dashboard px-3 px-lg-4 mt-3 mb-3" id="main-content">
@@ -236,7 +237,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-list-ol"></i> <?= __("Total QSOs"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $total_qsos; ?></h4>
+					<h4 id="dashboard-total-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $total_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -246,7 +247,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-calendar"></i> <?= __("QSOs this year"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $year_qsos; ?></h4>
+					<h4 id="dashboard-year-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $year_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -256,7 +257,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-calendar-day"></i> <?= __("QSOs this month"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $month_qsos; ?></h4>
+					<h4 id="dashboard-month-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $month_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -266,7 +267,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-clock"></i> <?= __("QSOs today"); ?></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $todays_qsos; ?></h4>
+					<h4 id="dashboard-todays-qsos" class="fw-bold mb-0 px-3 py-2"><?php echo $todays_qsos; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -276,7 +277,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-fire"></i> <?= __("Current Streak"); ?> <a href="<?php echo site_url('dayswithqso'); ?>#streaks" aria-label="<?= __("Current Streak"); ?>"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i></a></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?= sprintf(_ngettext("%d Day", "%d Days", (int) $current_streak), (int) $current_streak) ?></h4>
+					<h4 id="dashboard-current-streak" class="fw-bold mb-0 px-3 py-2"><?= sprintf(_ngettext("%d Day", "%d Days", (int) $current_streak), (int) $current_streak) ?></h4>
 				</div>
 			</div>
 		</div>
@@ -286,7 +287,7 @@ function echo_table_header_col($name) {
 					<h6 class="mb-0"><i class="fas fa-users"></i> <?= __("Unique callsigns"); ?> <a href="<?php echo site_url('statistics'); ?>#uniquetab" aria-label="<?= __("Unique callsigns"); ?>"><i class="fa-solid fa-up-right-from-square" aria-hidden="true"></i></a></h6>
 				</div>
 				<div class="card-body p-0">
-					<h4 class="fw-bold mb-0 px-3 py-2"><?php echo $unique_callsigns; ?></h4>
+					<h4 id="dashboard-unique-callsigns" class="fw-bold mb-0 px-3 py-2"><?php echo $unique_callsigns; ?></h4>
 				</div>
 			</div>
 		</div>
@@ -327,62 +328,9 @@ function echo_table_header_col($name) {
 			</div>
 		</div>
 		<?php } ?>
-		<div class="card">
-			<div class="card-header py-2">
-				<h6 class="mb-0"><i class="fas fa-list"></i> <?= __("Recent QSOs"); ?></h6>
-			</div>
-			<div class="card-body p-0">
-				<div class="table-responsive">
-					<table class="table table-striped table-hover mb-0" aria-label="<?= __("Recent QSOs"); ?>">
-						<thead>
-							<tr>
-								<th scope="col"><?= __("Date"); ?></th>
-								<?php if(($this->config->item('use_auth') && ($this->session->userdata('user_type') >= 2)) || $this->config->item('use_auth') === FALSE || ($this->config->item('show_time'))) { ?>
-								<th scope="col"><?= __("Time"); ?></th>
-								<?php } ?>
-								<th scope="col"><?= __("Callsign"); ?></th>
-								<?php
-								echo_table_header_col($this->session->userdata('user_column1')==""?'Mode':$this->session->userdata('user_column1'));
-								echo_table_header_col($this->session->userdata('user_column2')==""?'RSTS':$this->session->userdata('user_column2'));
-								echo_table_header_col($this->session->userdata('user_column3')==""?'RSTR':$this->session->userdata('user_column3'));
-								echo_table_header_col($this->session->userdata('user_column4')==""?'Band':$this->session->userdata('user_column4'));
-							?>
-							</tr>
-						</thead>
-						<?php
-						$i = 0;
-						if(!empty($last_qsos_list) > 0) {
-						foreach ($last_qsos_list->result() as $row) { ?>
-							<?php  echo '<tr id="qso_'.$row->COL_PRIMARY_KEY.'" class="tr'.($i & 1).'">'; ?>
-								<?php
-								if($this->session->userdata('user_date_format')) {
-									$custom_date_format = $this->session->userdata('user_date_format');
-								} else {
-									$custom_date_format = $this->config->item('qso_date_format');
-								}
-								?>
-								<td><?php $timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00'); echo date($custom_date_format, $timestamp); ?></td>
-								<?php if(($this->config->item('use_auth') && ($this->session->userdata('user_type') >= 2)) || $this->config->item('use_auth') === FALSE || ($this->config->item('show_time'))) { ?>
-								<td><?php $timestamp = strtotime($row->COL_TIME_ON ?? '1970-01-01 00:00:00'); echo date('H:i', $timestamp); ?></td>
-								<?php } ?>
-								<td>
-									<button type="button" class="btn btn-link text-decoration-none p-0 callsign" onclick="displayQso(<?php echo (int) $row->COL_PRIMARY_KEY; ?>)" aria-label="<?= __("View QSO"); ?> <?php echo html_escape($row->COL_CALL); ?>"><?php echo html_escape(strtoupper($row->COL_CALL)); ?></button>
-								</td>
-								<?php
-									echo_table_col($row, $this->session->userdata('user_column1')==""?'Mode':$this->session->userdata('user_column1'));
-									echo_table_col($row, $this->session->userdata('user_column2')==""?'RSTS':$this->session->userdata('user_column2'));
-									echo_table_col($row, $this->session->userdata('user_column3')==""?'RSTR':$this->session->userdata('user_column3'));
-									echo_table_col($row, $this->session->userdata('user_column4')==""?'Band':$this->session->userdata('user_column4'));
-								?>
-							</tr>
-						<?php $i++; } } ?>
-					</table>
-				</div>
-			</div>
+		<div id="dashboard-recent-qsos">
+			<?php $this->load->view('dashboard/partial/recent_qsos', ['last_qsos_list' => $last_qsos_list, 'last_qso_count' => $last_qso_count]); ?>
 		</div>
-		<small class="mb-3 me-2" style="float: right;">
-			<?= sprintf(_ngettext("Max. %d previous contact is shown", "Max. %d previous contacts are shown", intval($last_qso_count)), intval($last_qso_count)); ?>
-		</small>
 	</div>
 
 	<!-- Right column: cards -->

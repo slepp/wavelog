@@ -51,7 +51,7 @@ class QSO extends CI_Controller {
 		$user_id = $this->session->userdata('user_id') ?? null;
 		if ($this->worker->is_enabled() && $user_id) {
 			// qso past contacts (last 5) component
-			$topic = 'qso.' . $user_id;
+			$topic = $this->worker->user_qso_topic($user_id);
 			$this->worker->register_topic($topic);
 			$data['past_contacts_worker'] = ['topic' => $topic, 'token' => $this->worker->create_token($topic)];
 

@@ -72,7 +72,7 @@ class Logbook_model extends CI_Model {
 	 */
 	private function notify_qso_change($user_id) {
 		if ($user_id && $this->worker_enabled()) {
-			$this->worker->publish('qso.' . $user_id, ['type' => 'qso_changed']);
+			$this->worker->publish($this->worker->user_qso_topic($user_id), ['type' => 'qso_changed']);
 		}
 	}
 
